@@ -30,7 +30,9 @@ fn main() {
         Err(_e) => exit_early(format!("Invalid port provided. {}", port_arg)),
     };
 
-    let address: String = String::from(format!("127.0.0.1:{}", port));
+    // To see why we have to specify all interfaces, re-read:
+    // https://pythonspeed.com/articles/docker-connection-refused/
+    let address: String = String::from(format!("0.0.0.0:{}", port));
     let tcp_conn = TcpListener::bind(address);
     let listener = match tcp_conn {
         Ok(l) => l,
