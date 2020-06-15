@@ -1,4 +1,6 @@
+use prost::Message;
 use std::env;
+use std::io::Cursor;
 use std::io::Read;
 use std::io::Write;
 use std::net::TcpListener;
@@ -32,11 +34,51 @@ fn main() {
     }
 }
 
+// Include the `items` module, which is generated from items.proto.
+pub mod items {
+    include!(concat!(env!("OUT_DIR"), "/snazzy.items.rs"));
+}
+
+pub fn create_large_shirt(color: String) -> items::Shirt {
+    let mut shirt = items::Shirt::default();
+    shirt.color = color;
+    shirt.set_size(items::shirt::Size::Large);
+    shirt
+}
+
+pub fn serialize_shirt(shirt: &items::Shirt) -> Vec<u8> {
+    let mut buf = Vec::new();
+    buf.reserve(shirt.encoded_len());
+    // Unwrap is safe, since we have reserved sufficient capacity in the vector.
+    shirt.encode(&mut buf).unwrap();
+    buf
+}
+
+pub fn deserialize_shirt(buf: &[u8]) -> Result<items::Shirt, prost::DecodeError> {
+    items::Shirt::decode(&mut Cursor::new(buf))
+}
+
 fn handle_connection(mut stream: TcpStream) {
     let mut buffer = [0; 512];
 
     stream.read(&mut buffer).unwrap();
-    let resp: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&buffer[..]);
-    let body: String = resp.chars().rev().collect();
-    stream.write(body.as_bytes()).unwrap();
+    let req_body: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&buffer[..]);
+
+    // Send the request body right back
+    // stream.write(req_body.as_bytes()).unwrap();
+
+    // Reverse Input (somehow adds newline though?)
+    // let body: String = req_body.chars().rev().collect::<String>();
+    // stream.write(body.as_bytes()).unwrap();
+
+    // Protobuf Response
+    let shirt: items::Shirt = create_large_shirt(req_body.to_string());
+    let body = serialize_shirt(&shirt);
+    // let deser = match deserialize_shirt(&body) {
+    //     Ok(v) => v,
+    //     Err(e) => panic!("Unable to deser: {}", e)
+    // };
+    // let body = shirt.to_string();
+
+    stream.write(&body).unwrap();
 }
