@@ -59,26 +59,11 @@ pub fn deserialize_shirt(buf: &[u8]) -> Result<items::Shirt, prost::DecodeError>
 }
 
 fn handle_connection(mut stream: TcpStream) {
+    // shorthand to initialize all 512 bytes as 0
     let mut buffer = [0; 512];
-
     stream.read(&mut buffer).unwrap();
     let req_body: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&buffer[..]);
-
-    // Send the request body right back
-    // stream.write(req_body.as_bytes()).unwrap();
-
-    // Reverse Input (somehow adds newline though?)
-    // let body: String = req_body.chars().rev().collect::<String>();
-    // stream.write(body.as_bytes()).unwrap();
-
-    // Protobuf Response
     let shirt: items::Shirt = create_large_shirt(req_body.to_string());
     let body = serialize_shirt(&shirt);
-    // let deser = match deserialize_shirt(&body) {
-    //     Ok(v) => v,
-    //     Err(e) => panic!("Unable to deser: {}", e)
-    // };
-    // let body = shirt.to_string();
-
     stream.write(&body).unwrap();
 }
