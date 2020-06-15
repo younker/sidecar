@@ -12,7 +12,17 @@ fn exit_early(msg: String) -> i16 {
     process::exit(1);
 }
 
+fn set_ctrlc_handler() {
+    ctrlc::set_handler(move || {
+        println!("Exiting...");
+        process::exit(0);
+    })
+    .expect("Error setting Ctrl-C handler");
+}
+
 fn main() {
+    set_ctrlc_handler();
+
     let args: Vec<String> = env::args().collect();
     let port_arg = &args[1];
     let port = match port_arg.parse::<i16>() {
